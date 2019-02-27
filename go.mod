@@ -1,4 +1,4 @@
-module github.com/casbin/casbin-server
+module github.com/qeek-dev/casbin-server
 
 require (
 	github.com/casbin/casbin v1.8.1
