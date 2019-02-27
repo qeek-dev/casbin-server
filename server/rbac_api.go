@@ -191,3 +191,79 @@ func (s *Server) convertPermissions(user string, permissions ...string) []interf
 
 	return params
 }
+
+// GetImplicitRolesForUser gets implicit roles that a user has.
+// Compared to GetRolesForUser(), this function retrieves indirect roles besides direct roles.
+// For example:
+// g, alice, role:admin
+// g, role:admin, role:user
+//
+// GetRolesForUser("alice") can only get: ["role:admin"].
+// But GetImplicitRolesForUser("alice") will get: ["role:admin", "role:user"].
+func (s *Server) GetImplicitRolesForUser(ctx context.Context, in *pb.ImplicitRolesForUserRequest) (*pb.ArrayReply, error) {
+	e, err := s.getEnforcer(int(in.EnforcerHandler))
+	if err != nil {
+		return &pb.ArrayReply{}, err
+	}
+
+	return &pb.ArrayReply{Array: e.GetImplicitRolesForUser(in.User, in.Domain...)}, nil
+}
+
+// GetImplicitPermissionsForUser gets implicit permissions for a user or role.
+// Compared to GetPermissionsForUser(), this function retrieves permissions for inherited roles.
+// For example:
+// p, admin, data1, read
+// p, alice, data2, read
+// g, alice, admin
+//
+// GetPermissionsForUser("alice") can only get: [["alice", "data2", "read"]].
+// But GetImplicitPermissionsForUser("alice") will get: [["admin", "data1", "read"], ["alice", "data2", "read"]].
+func (s *Server) GetImplicitPermissionsForUser(ctx context.Context, in *pb.ImplicitPermissionsForUserRequest) (*pb.Array2DReply, error) {
+	e, err := s.getEnforcer(int(in.EnforcerHandler))
+	if err != nil {
+		return &pb.Array2DReply{}, err
+	}
+
+	return s.wrapPlainPolicy(e.GetImplicitPermissionsForUser(in.User)), nil
+}
+
+// HasImplicitPermissionForUser check implicit permission for a user
+// Compared to GetPermissionsForUser(), this function retrieves permissions for inherited roles.
+// For example:
+// p, admin, data1, read
+// p, alice, data2, read
+// g, alice, admin
+//
+// HasImplicitPermissionForUser("alice", ["data1", "read"]) is true
+// HasImplicitPermissionForUser("alice", ["data2", "read"]) is true
+// HasImplicitPermissionForUser("admin", ["data1", "read"]) is true
+// HasImplicitPermissionForUser("admin", ["data2", "read"]) is false
+func (s *Server) HasImplicitPermissionForUser(ctx context.Context, in *pb.PermissionRequest) (*pb.BoolReply, error) {
+	e, err := s.getEnforcer(int(in.EnforcerHandler))
+	if err != nil {
+		return &pb.BoolReply{}, err
+	}
+
+	matched := false
+	for _, fieldValue := range e.GetImplicitPermissionsForUser(in.User) {
+		if arrayEquals(fieldValue[1:], in.Permissions) {
+			matched = true
+			break
+		}
+	}
+
+	return &pb.BoolReply{Res: matched}, nil
+}
+
+func arrayEquals(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
