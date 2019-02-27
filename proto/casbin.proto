@@ -65,6 +65,12 @@ service Casbin {
   rpc HasNamedPolicy (PolicyRequest) returns (BoolReply) {}
   rpc HasGroupingPolicy (PolicyRequest) returns (BoolReply) {}
   rpc HasNamedGroupingPolicy (PolicyRequest) returns (BoolReply) {}
+
+  rpc GetRolesForUser(UserRoleRequest) returns (ArrayReply) {}
+  rpc GetImplicitRolesForUser(ImplicitRolesForUserRequest) returns (ArrayReply) {}
+  rpc GetImplicitPermissionsForUser(ImplicitPermissionsForUserRequest) returns (Array2DReply) {}
+  rpc HasPermissionForUser(PermissionRequest) returns (BoolReply) {}
+  rpc HasImplicitPermissionForUser(PermissionRequest) returns (BoolReply) {}
 }
 
 message NewEnforcerRequest {
@@ -135,6 +141,17 @@ message PermissionRequest {
   int32 enforcerHandler = 1;
   string user = 2;
   repeated string permissions = 3;
+}
+
+message ImplicitRolesForUserRequest {
+  int32 enforcerHandler = 1;
+  string user = 2;
+  repeated string domain = 3;
+}
+
+message ImplicitPermissionsForUserRequest {
+  int32 enforcerHandler = 1;
+  string user = 2;
 }
 
 message Array2DReply {
